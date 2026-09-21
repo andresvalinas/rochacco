@@ -780,21 +780,48 @@ function faixaR(d,meta){const pts=Math.max(0,Math.floor(meta-d));
  if(pts<1)return{txt:'Abaixo da meta ⚠️ (<1 p.p.)',cor:'#D9A50A'};
  return{txt:`−${Math.min(pts*0.4,5).toFixed(1).replace('.',',')}% (${pts} p.p. abaixo)`,cor:'#C22B2B'};}
 let perAtual='set';
+// ordenação clicável em todas as tabelas
+function parseVal(s){
+ s=s.trim();
+ if(!s||s=='—')return -Infinity;
+ const d=s.match(/^(\d{2})\/(\d{2})(?: (\d{2}):(\d{2}))?/);
+ if(d)return (+d[2])*1e6+(+d[1])*1e4+(+(d[3]||0))*100+(+(d[4]||0));
+ let t=s.replace(/[✓✗✅❌📡RrR\$%h ]/g,'').replace(/[^0-9.,\-]/g,'');
+ if(t){if(t.includes(',')){t=t.replace(/\./g,'').replace(',','.');}
+  const n=parseFloat(t); if(!isNaN(n))return n;}
+ return s.toLowerCase();
+}
+function sortAll(root){
+ (root||document).querySelectorAll('table').forEach(tb=>{
+  if(tb.dataset.sortable)return; tb.dataset.sortable='1';
+  tb.querySelectorAll('thead th').forEach((th,idx)=>{
+   th.style.cursor='pointer'; th.title='clique para ordenar';
+   th.addEventListener('click',()=>{
+    const body=tb.querySelector('tbody'); if(!body)return;
+    const dir=th.dataset.dir=th.dataset.dir=='asc'?'desc':'asc';
+    tb.querySelectorAll('thead th').forEach(x=>{if(x!=th)x.dataset.dir='';x.innerHTML=x.innerHTML.replace(/ [▲▼]$/,'');});
+    th.innerHTML=th.innerHTML.replace(/ [▲▼]$/,'')+(dir=='asc'?' ▲':' ▼');
+    [...body.rows].map(r=>[parseVal(r.cells[idx]?.textContent||''),r])
+     .sort((a,b)=>{const x=a[0],y=b[0];
+      const c=(typeof x=='string'||typeof y=='string')?String(x).localeCompare(String(y),'pt-BR'):x-y;
+      return dir=='asc'?c:-c;})
+     .forEach(([,r])=>body.appendChild(r));
+   });
+  });
+ });
+}
 
 const PAGINAS=[
- {id:'resumo',rot:'Painel',grupo:'Painel',nome:'Resumo Executivo',sub:'Disponibilidade, multa e valor por família — período de medição selecionável'},
- {id:'cliente',grupo:'Painel',nome:'Apresentação Cliente',sub:'Visão resumida para compartilhar com a Rocha'},
- {id:'statusagora',rot:'Operação',grupo:'Operação',nome:'Status Agora',sub:'Situação de cada equipamento da frota contratual'},
+ {id:'resumo',rot:'Painel',grupo:'Painel',nome:'Resumo Executivo',sub:'Disponibilidade, multa e valor por família — selecione o mês de medição'},
+ {id:'statusagora',rot:'Operação',grupo:'Operação',nome:'Status Agora',sub:'Boletim da frota no formato dos grupos — por tipo, com a falha quando houver'},
  {id:'porfamilia',grupo:'Operação',nome:'Por Família',sub:'Detalhamento por máquina: disponibilidade antes e depois da compensação por reserva'},
- {id:'paradas',grupo:'Operação',nome:'Registro de Paradas',sub:'Cada ocorrência com duração, motivo, culpa e cobertura'},
- {id:'pareto',grupo:'Operação',nome:'Pareto de Quebras',sub:'MTBF, MTTR e o ranking de causas de indisponibilidade'},
- {id:'subst',grupo:'Operação',nome:'Substituições',sub:'Coberturas por reserva comunicadas nos grupos'},
- {id:'frota',grupo:'Operação',nome:'Gestão de Frota',sub:'Titulares e reservas por família, vigência e renovação'},
+ {id:'paradas',grupo:'Operação',nome:'Registro de Paradas',sub:'Ocorrências por site, cobertura por reserva e substituições comunicadas'},
+ {id:'pareto',grupo:'Operação',nome:'Pareto de Quebras',sub:'MTBF e MTTR por máquina, causas e tendências de indisponibilidade'},
  {id:'checklists',grupo:'Operação',nome:'Checklists',sub:'Disciplina de checklist por máquina, com filtros'},
  {id:'mapa',grupo:'Operação',nome:'Localização',sub:'Onde a frota está — Paranaguá, Porto e Armazéns'},
- {id:'b4',rot:'Fase 2',grupo:'Fase 2',nome:'Combustível',sub:'Abastecimentos e a trilha para consumo por hora e equipamento'},
- {id:'b5',grupo:'Fase 2',nome:'Performance',sub:'Produção, ciclos e produtividade'},
- {id:'contrato',rot:'Contrato',grupo:'Contrato 27385',nome:'As regras do jogo',sub:'Anexo V e condições comerciais em linguagem de operação'},
+ {id:'b5',rot:'Fase 2',grupo:'Fase 2',nome:'Performance',sub:'Produção, ciclos e produtividade'},
+ {id:'frota',rot:'Contrato',grupo:'Contrato 27385',nome:'Gestão de Frota',sub:'Titulares e reservas por família, vigência e renovação'},
+ {id:'contrato',grupo:'Contrato 27385',nome:'Resumo Contrato',sub:'Os números e as regras do contrato 27385 em linguagem de operação'},
  {id:'metodo',grupo:'Contrato 27385',nome:'Metodologia',sub:'Como estes números são produzidos — e as regras que nunca quebramos'},
 ];
 document.getElementById('menu').innerHTML=`<div class="marca"><div class="logo">${LOGO}</div>
@@ -803,7 +830,7 @@ document.getElementById('menu').innerHTML=`<div class="marca"><div class="logo">
  `<div class="rodape-menu">ARMAC Locação, Logística e Serviços<br>Inteligência operacional v3<br>Atualizado em ${D.gerado_em}</div>`;
 
 // ===== componentes compartilhados =====
-function seletorPeriodo(alvo){return `<div class="subtabs">${D.PERIODOS.map(p=>`<button data-per="${p.id}" class="${p.id==perAtual?'on':''}" onclick="perAtual='${p.id}';${alvo}()">${p.label}${p.fechado?'':' ⏱️'}</button>`).join('')}</div>`;}
+function seletorPeriodo(alvo){return `<div class="filtros"><label style="font-size:12px;font-weight:700;color:var(--muted);align-self:center">Mês de medição</label><select onchange="perAtual=this.value;${alvo}()">${D.PERIODOS.map(p=>`<option value="${p.id}" ${p.id==perAtual?'selected':''}>${p.label}${p.fechado?'':' ⏱️ em andamento'}</option>`).join('')}</select></div>`;}
 function bannerPer(per){return per.fechado?'':`<div style="background:linear-gradient(135deg,#FFF3E8,#FFE3CC);border:1.5px solid var(--rocha);border-radius:12px;padding:12px 18px;margin-bottom:16px;color:#7A3A10;font-weight:600;font-size:13px">⏱️ Medição em andamento — <b>${per.dias_ap} de ${per.dias} dias apurados</b>. Paradas em aberto contam até hoje.</div>`;}
 function trioFin(per,R){const fams=Object.values(R),g=fams.reduce((a,f)=>a+f.glosa,0);
  return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:20px">
@@ -827,20 +854,21 @@ function renderResumo(){
   <div class="painel"><h3>Leitura executiva</h3>
    <p class="desc" style="max-width:84ch">Agosto fechou acima da meta em todas as famílias pela régua contratual — pior família PC 16T Armazém em 97,83% já com a frota vigente da época (inclui PA00207 e PA00448, que saíram na renovação). Setembro acende o primeiro alerta: três paradas em aberto sem cobertura de reserva registrada derrubam a Mini para 86,9% e expõem R$ 52 mil. Acionar a reserva MI00567 e comunicar a substituição no grupo zera a exposição.</p></div>`;
 }
-// ===== Status Agora =====
-function idadeStr(dt){return dt;}
+// ===== Status Agora (formato boletim dos grupos) =====
 function renderStatus(){
  const el=document.getElementById('pg-statusagora'); if(!el)return;
- const abertas={}; D.registro.filter(r=>r.aberta).forEach(r=>abertas[nome(r.tag)]=r.motivo);
- const bloco=loc=>{const ms=frotaAtual().filter(f=>f.local==loc);
-  return `<div class="painel"><h3>${loc} <span class="pill">${ms.length} máquinas</span></h3><div class="st-grid">`+
-   ms.map(f=>{const pos=D.pos_snap[f.tag];const ab=abertas[f.tag];
-    return `<div class="st-card" style="border-left:4px solid ${f.ok?'var(--green)':'var(--red)'}">
-     <b>${f.tag}</b>${f.papel=='Reserva'?' <span class="pill">R</span>':''}
-     <div class="lin">${f.fam}</div>
-     <div class="lin" style="font-weight:700;color:${f.ok?'var(--green)':'var(--red)'}">${f.ok?'✓ operando':'✗ indisponível'}</div>
-     ${ab?`<div class="lin" style="color:var(--red)">⏱ em aberto</div>`:''}
-     <div class="lin" id="sig-${f.tag}">${pos?'📡 '+pos[2]:'📡 sem sinal'}</div></div>`;}).join('')+`</div></div>`;};
+ const abertas={}; D.registro.filter(r=>r.aberta).forEach(r=>{abertas[nome(r.tag)]=r;});
+ const linha=f=>{const ab=abertas[f.tag];
+  const falha=ab?` — <span style="color:var(--red)">${ab.motivo.replace(' (parada em aberto)','')} · desde ${ab.ini.slice(8,10)}/${ab.ini.slice(5,7)}</span>`:(!f.ok?' — <span style="color:var(--red)">indisponível</span>':'');
+  const sig=D.pos_snap[f.tag]?`<span class="pill" id="sig-${f.tag}" style="float:right">📡 ${D.pos_snap[f.tag][2]}</span>`:'';
+  return `<div style="padding:5px 2px;border-bottom:1px dashed var(--border);font-size:13.5px">${f.ok?'✅':'❌'} <b>${f.tag}</b>${f.imp&&f.imp!='—'?' <span style="color:var(--muted)">· '+f.imp+'</span>':''}${f.papel=='Reserva'?' <span class="pill">reserva</span>':''}${falha}${sig}</div>`;};
+ const bloco=loc=>{
+  const fams=[...new Set(frotaAtual().filter(f=>f.local==loc).map(f=>f.fam))];
+  return `<div class="painel"><h3>${loc=='Armazém'?'🏭 ARMAZÉM':'⚓ PORTO'}</h3>`+
+   fams.map(fam=>{const ms=frotaAtual().filter(f=>f.local==loc&&f.fam==fam);
+    const ok=ms.filter(m=>m.ok).length;
+    return `<div style="margin:12px 0 4px;font-weight:800;font-size:12px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)">${fam} <span class="pill">${ok}/${ms.length} ✅</span></div>`+
+     ms.map(linha).join('');}).join('')+`</div>`;};
  el.innerHTML=`<div id="st-badge" style="font-size:12px;color:var(--muted);margin-bottom:10px">${LIVE?'🟢 telemetria ao vivo · atualiza a cada 2 min':'📍 último sinal conhecido (snapshot '+D.gerado_em+') · tempo real na versão hospedada'}</div>`+bloco('Armazém')+bloco('Porto');
  if(LIVE) atualizaSinais();
 }
@@ -851,7 +879,7 @@ async function atualizaSinais(){
   const rows=await r.json();
   rows.forEach(p=>{const el=document.getElementById('sig-'+p.ativo);if(!el)return;
    const hh=(Date.now()-new Date(p.location_datetime).getTime())/36e5;
-   el.textContent='📡 sinal há '+(hh<1?Math.round(hh*60)+' min':hh<48?hh.toFixed(0)+' h':Math.round(hh/24)+' dias');});
+   el.textContent='📡 há '+(hh<1?Math.round(hh*60)+' min':hh<48?hh.toFixed(0)+' h':Math.round(hh/24)+' dias');});
   const b=document.getElementById('st-badge'); if(b)b.innerHTML='🟢 telemetria ao vivo · '+rows.length+' máquinas com sinal · atualizado '+new Date().toLocaleTimeString('pt-BR').slice(0,5);
  }catch(e){}
 }
@@ -882,11 +910,79 @@ function renderMed(){
    <div style="display:flex;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border);flex-wrap:wrap;font-size:12px">
     <span style="background:var(--trilho);border-radius:6px;padding:5px 12px">Valor máximo <b class="num" style="color:var(--green)">${fmtBRL(f.val_max)}</b> <i style="color:var(--muted);font-style:normal">(rateio por posição)</i></span>
     <span style="background:var(--trilho);border-radius:6px;padding:5px 12px">Multa <b class="num" style="color:${f.glosa>0?'var(--red)':'var(--green)'}">${f.glosa>0?'− '+fmtBRL(f.glosa):'R$ 0,00'}</b></span></div></div>`;}).join('');
- const slaHtml=pares.map(p=>{const ok=p.horas<=2,dia=p.parada.slice(8,10)+'/'+p.parada.slice(5,7);
-  return `<div class="sla-row" title="${(p.msg_parada||'').replace(/"/g,'')}"><div class="sla-tag">${nome(p.tag)}<small>${dia} · ${gN[p.grupo]}</small></div><div class="sla-barra"><div class="meta-linha" style="left:${metaPos}%"></div><div class="sla-fill ${ok?'ok':''}" style="width:${esc(p.horas)}%"></div></div><div class="sla-h num ${ok?'bom':'ruim'}">${fmtH(p.horas)}</div></div>`;}).join('');
- el.innerHTML=seletorPeriodo('renderMed')+bannerPer(per)+trioFin(per,R)+cards+
-  `<div class="painel"><h3>Cronômetro de SLA · ciclos parada → liberação</h3><p class="desc">Linha azul = 2h do contrato. Escala logarítmica; passe o mouse para a mensagem original.</p>${slaHtml}
-   <div class="legenda"><span><i style="background:var(--green)"></i>dentro de 2h</span><span><i style="background:var(--red)"></i>acima de 2h</span><span><i style="background:var(--armac)"></i>meta contratual (2h)</span></div></div>`;
+ el.innerHTML=seletorPeriodo('renderMed')+bannerPer(per)+trioFin(per,R)+cards;
+ sortAll(el);
+}
+// ===== Registro de Paradas + Substituições =====
+let mesParadas='todos';
+function renderParadas(){
+ const el=document.getElementById('pg-paradas'); if(!el)return;
+ const fmes=r=>mesParadas=='todos'||r.ini.slice(5,7)==(mesParadas=='ago'?'08':'09');
+ const regs=D.registro.filter(fmes);
+ const quadro=loc=>{
+  const rs=regs.filter(r=>r.local==loc);
+  if(!rs.length)return `<div class="painel"><h3>${loc}</h3><p class="desc">Sem ocorrências no período selecionado.</p></div>`;
+  return `<div class="painel"><h3>${loc} <span class="pill">${rs.length} ocorrências</span></h3>
+  <div class="tbl-scroll"><table><thead><tr><th>Máquina</th><th>Família</th><th>Início</th><th>Fim</th><th class="num">Duração</th><th>Motivo relatado</th><th>Culpa</th><th>Atendida por reserva</th><th>SLA 2h</th></tr></thead>
+  <tbody>${rs.map(r=>{const f=s=>s.slice(8,10)+'/'+s.slice(5,7)+' '+s.slice(11,16);
+   const cc=r.culpa=='ARMAC'?'var(--armac)':r.culpa=='ROCHA'?'var(--rocha)':'var(--muted)';
+   return `<tr><td class="cel-main">${nome(r.tag)}</td><td style="color:var(--muted)">${r.fam}${r.papel=='Reserva'?' (R)':''}${r.vig=='ago'?' · saiu':''}</td><td class="num">${f(r.ini)}</td><td class="num">${r.fim?f(r.fim):'<b style="color:var(--red)">em aberto</b>'}</td><td class="num" style="font-weight:700;color:${r.sla?'var(--green)':'var(--red)'}">${r.h.toFixed(1).replace('.',',')}h</td><td style="color:var(--muted);font-size:12px">${r.motivo.replace(/</g,'&lt;')}</td><td style="font-weight:700;color:${cc}">${r.culpa}</td><td style="font-weight:700;color:${r.coberta?'var(--green)':'var(--red)'}">${r.coberta?'✓ sim':'✗ não'}</td><td style="font-weight:800;color:${r.sla?'var(--green)':'var(--red)'}">${r.sla?'✓':'✗'}</td></tr>`}).join('')}</tbody></table></div></div>`;};
+ const R=D.RESP[mesParadas=='ago'?'ago':'set'];
+ el.innerHTML=`<div class="filtros"><label style="font-size:12px;font-weight:700;color:var(--muted);align-self:center">Mês</label>
+  <select onchange="mesParadas=this.value;renderParadas()">
+   <option value="todos" ${mesParadas=='todos'?'selected':''}>Todos (01/08 a 21/09)</option>
+   <option value="ago" ${mesParadas=='ago'?'selected':''}>Agosto/2026</option>
+   <option value="set" ${mesParadas=='set'?'selected':''}>Setembro/2026</option></select></div>
+ <div class="kpis">${kpi(regs.filter(r=>r.culpa=='ARMAC').length,'responsabilidade ARMAC')}${kpi(regs.filter(r=>r.culpa=='ROCHA').length,'responsabilidade Rocha','destaque')}${kpi(regs.filter(r=>r.culpa=='A CLASSIFICAR').length,'a classificar')}${kpi(regs.filter(r=>r.coberta).length,'atendidas por reserva','bom')}</div>`
+ +quadro('Armazém')+quadro('Porto')
+ +`<div class="painel"><h3>Substituições comunicadas nos grupos <span class="pill">${D.subst.length}</span></h3>
+   <p class="desc" style="max-width:86ch">Lição TIPLAM: cobertura só vira compensação de disponibilidade com <b>início e fim</b> confirmados — registro órfão (sem fim) gera hora de compensação fantasma e é auditado antes de contar.</p>
+   <div class="tbl-scroll"><table><thead><tr><th>Data</th><th>Grupo</th><th>Máquinas</th><th>Comunicado por</th><th>Mensagem</th></tr></thead>
+   <tbody>${D.subst.map(s=>`<tr><td class="num">${s.dt.slice(8,10)}/${s.dt.slice(5,7)} ${s.dt.slice(11,16)}</td><td>${gN[s.grupo]}</td><td class="cel-main">${s.tags.map(t=>nome(t)).join(' → ')}</td><td style="color:var(--muted)">${(s.autor||'—').replace('~','').trim()}</td><td style="color:var(--muted);font-size:12px">${s.msg.replace(/</g,'&lt;')}</td></tr>`).join('')}</tbody></table></div></div>
+ <div class="painel"><h3>Pool de compensação · ${mesParadas=='ago'?'Agosto':'Setembro'}/2026</h3>
+  <div class="tbl-scroll"><table><thead><tr><th>Família</th><th class="num">Pool disponível</th><th class="num">Usado</th><th class="num">Ocioso</th></tr></thead>
+  <tbody>${Object.entries(R).map(([n,f])=>`<tr><td class="cel-main">${n}</td><td class="num">${f.pool_tot.toFixed(0)}h</td><td class="num">${f.pool_usado.toFixed(0)}h</td><td class="num" style="color:${f.pool_tot-f.pool_usado>0&&f.h_ind>0?'var(--red)':'var(--muted)'}">${(f.pool_tot-f.pool_usado).toFixed(0)}h</td></tr>`).join('')}</tbody></table></div></div>`;
+ sortAll(el);
+}
+// ===== Pareto: tabela completa por máquina + gráficos =====
+let buscaMaq='';
+function statsMaquina(){
+ return D.frota_oficial.map(f=>{
+  const num=f.tag.slice(-4);
+  const cics=D.registro.filter(r=>r.tag==num);
+  const horas=cics.reduce((a,c)=>a+c.h,0);
+  const n=cics.length;
+  const mtbf=n?Math.round(D.dias_periodo*24/n):null;
+  const mttr=n?horas/n:null;
+  return {tag:f.tag,fam:f.fam,local:f.local,vig:f.vig,n,horas,mtbf,mttr};});
+}
+function renderParetoTab(){
+ const el=document.getElementById('tb-maq'); if(!el)return;
+ const q=buscaMaq.toLowerCase();
+ el.innerHTML=statsMaquina().filter(m=>!q||m.tag.toLowerCase().includes(q)||m.fam.toLowerCase().includes(q))
+  .sort((a,b)=>b.horas-a.horas)
+  .map(m=>`<tr><td class="cel-main">${m.tag}${m.vig=='ago'?' <span class="pill">saiu</span>':''}</td><td style="color:var(--muted)">${m.local} · ${m.fam}</td><td class="num">${m.n||'—'}</td><td class="num">${m.horas?m.horas.toFixed(0)+'h':'—'}</td><td class="num">${m.mtbf?m.mtbf.toLocaleString('pt-BR')+'h':'—'}</td><td class="num">${m.mttr?m.mttr.toFixed(1).replace('.',',')+'h':'—'}</td></tr>`).join('');
+}
+function semanalSvg(){
+ const sem={};
+ D.registro.forEach(r=>{const d=new Date(r.ini.slice(0,10));const w=Math.floor((d-new Date('2026-08-01'))/(7*864e5));
+  if(w>=0){sem[w]=sem[w]||{n:0,h:0};sem[w].n++;sem[w].h+=r.h;}});
+ const ws=Object.keys(sem).map(Number).sort((a,b)=>a-b);
+ const W=680,H=200,pad=42,maxH=Math.max(...ws.map(w=>sem[w].h));
+ const x=i=>pad+i*((W-2*pad)/Math.max(1,ws.length-1)), y=v=>H-34-(v/maxH)*(H-64);
+ const rot=w=>{const d0=new Date('2026-08-01');d0.setDate(d0.getDate()+w*7);return String(d0.getDate()).padStart(2,'0')+'/'+String(d0.getMonth()+1).padStart(2,'0');};
+ return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block"><line x1="${pad}" y1="${H-34}" x2="${W-pad}" y2="${H-34}" stroke="var(--border)"/>
+  <polyline fill="none" stroke="var(--rocha)" stroke-width="2.5" points="${ws.map((w,i)=>x(i)+','+y(sem[w].h)).join(' ')}"/>
+  ${ws.map((w,i)=>`<circle cx="${x(i)}" cy="${y(sem[w].h)}" r="4" fill="var(--rocha)"/><text x="${x(i)}" y="${y(sem[w].h)-9}" font-size="10.5" font-weight="700" fill="var(--text)" text-anchor="middle" font-family="Inter">${sem[w].h.toFixed(0)}h</text><text x="${x(i)}" y="${H-16}" font-size="10" fill="var(--muted)" text-anchor="middle" font-family="Inter">sem. ${rot(w)}</text>`).join('')}</svg>`;
+}
+function top10Svg(){
+ const top=statsMaquina().filter(m=>m.horas>0).sort((a,b)=>b.horas-a.horas).slice(0,10);
+ const W=680,rowH=24,H=top.length*rowH+16,maxV=top[0].horas;
+ return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block">${top.map((m,i)=>{
+  const y=8+i*rowH,bw=(m.horas/maxV)*(W-210);
+  return `<text x="86" y="${y+13}" font-size="11.5" font-weight="700" fill="var(--text)" text-anchor="end" font-family="Inter">${m.tag}</text>
+   <rect x="94" y="${y+2}" width="${bw}" height="15" rx="3" fill="${m.vig=='ago'?'#8B9AB8':'var(--rocha)'}"/>
+   <text x="${98+bw}" y="${y+13}" font-size="11" font-weight="700" fill="var(--muted)" font-family="Inter">${m.horas.toFixed(0)}h · ${m.n}×</text>`;}).join('')}</svg>`;
 }
 // ===== páginas estáticas =====
 function paretoSvg(){
@@ -927,31 +1023,16 @@ const turnosHtml=turnos.map(([n,v])=>`<div style="display:grid;grid-template-col
 
 const HTMLP={
  resumo:``, porfamilia:``, statusagora:``,
- cliente:`<div class="painel"><h3>ARMAC × Rocha Terminais · contrato 27385</h3>
-  <p class="desc" style="max-width:84ch">Centro de Controle Operacional dedicado à operação de Paranaguá: 35 máquinas em 6 famílias, medição de disponibilidade pela régua contratual, substituições monitoradas contra o SLA de 2h, telemetria com posição em tempo real e leitura automatizada dos grupos operacionais por IA. Atualizado continuamente.</p>
-  <div class="kpis">${kpi('R$ 1.575.000','valor fixo mensal')}${kpi('48','meses de vigência')}${kpi('28+7','titulares + reservas')}${kpi('95–97%','disponibilidade mínima')}${kpi('2h','SLA de substituição')}</div>
-  <div id="cli-fams"></div>
-  <p class="desc">Detalhes: Resumo Executivo (medição), Status Agora (frota), Localização (mapa em tempo real). Este material é um termômetro operacional e não substitui a medição oficial da Cláusula 3.1.3.</p></div>`,
- paradas:`<div class="kpis">${kpi(D.resumo_culpa['ARMAC']||0,'responsabilidade ARMAC')}${kpi(D.resumo_culpa['ROCHA']||0,'responsabilidade Rocha','destaque')}${kpi(D.resumo_culpa['A CLASSIFICAR']||0,'a classificar')}${kpi(D.cobertas,'cobertas por reserva','bom')}</div>
-  <div class="painel"><h3>Registro de paradas · ${D.registro.length} ocorrências</h3>
-  <p class="desc" style="max-width:84ch">Culpabilidade automática pelas regras do contrato: pneu, piso, contaminação e espera de operação = Rocha; falha mecânica, elétrica ou vazamento = ARMAC. Paradas Rocha e cobertas por reserva não contam contra a disponibilidade.</p>
-  <div class="tbl-scroll"><table><thead><tr><th>Máquina</th><th>Local · Família</th><th>Início</th><th>Fim</th><th class="num">Duração</th><th>Motivo relatado</th><th>Culpa</th><th>Reserva</th><th>SLA 2h</th></tr></thead>
-  <tbody>${D.registro.map(r=>{const f=s=>s.slice(8,10)+'/'+s.slice(5,7)+' '+s.slice(11,16);
-   const cc=r.culpa=='ARMAC'?'var(--armac)':r.culpa=='ROCHA'?'var(--rocha)':'var(--muted)';
-   return `<tr><td class="cel-main">${nome(r.tag)}</td><td style="color:var(--muted)">${r.local!='—'?r.local+' · ':''}${r.fam}${r.papel=='Reserva'?' (R)':''}${r.vig=='ago'?' · saiu':''}</td><td class="num">${f(r.ini)}</td><td class="num">${r.fim?f(r.fim):'<b style="color:var(--red)">em aberto</b>'}</td><td class="num" style="font-weight:700;color:${r.sla?'var(--green)':'var(--red)'}">${r.h.toFixed(1).replace('.',',')}h</td><td style="color:var(--muted);font-size:12px">${r.motivo.replace(/</g,'&lt;')}</td><td style="font-weight:700;color:${cc}">${r.culpa}</td><td>${r.coberta?'✓':'—'}</td><td style="font-weight:800;color:${r.sla?'var(--green)':'var(--red)'}">${r.sla?'✓':'✗'}</td></tr>`}).join('')}</tbody></table></div></div>`,
- pareto:`<div class="kpis">${kpi(D.mtbf.toLocaleString('pt-BR')+'h','MTBF · horas médias entre falhas')}${kpi(fmtH(D.mttr_mediana),'MTTR · tempo mediano de reparo','ruim')}${kpi(pares.filter(p=>p.horas<=2).length+' de '+pares.length,'reparos dentro de 2h','ruim')}${kpi('49 / 124','corretivas relatadas / liberações')}</div>
+ paradas:``,
+ pareto:`<div class="kpis">${kpi(D.mtbf.toLocaleString('pt-BR')+'h','MTBF da frota · horas entre falhas')}${kpi(fmtH(D.mttr_mediana),'MTTR da frota · mediana de reparo','ruim')}${kpi(pares.filter(p=>p.horas<=2).length+' de '+pares.length,'reparos dentro de 2h','ruim')}${kpi('49 / 124','corretivas relatadas / liberações')}</div>
+  <div class="painel"><h3>Todas as máquinas · quebras, horas e indicadores</h3>
+   <div class="filtros"><input id="busca-maq" placeholder="🔎 pesquisar máquina ou família…" style="border:1px solid var(--border);background:var(--card);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;font-family:inherit;width:280px" oninput="buscaMaq=this.value;renderParetoTab()"></div>
+   <div class="tbl-scroll"><table><thead><tr><th>Máquina</th><th>Tipo</th><th class="num">Quebras</th><th class="num">Horas paradas</th><th class="num">MTBF</th><th class="num">MTTR</th></tr></thead><tbody id="tb-maq"></tbody></table></div>
+   <p class="desc" style="margin-top:10px">MTBF por máquina = horas-calendário do período (${D.dias_periodo}d) ÷ quebras · MTTR = média dos ciclos parada→liberação da máquina.</p></div>
   <div class="painel"><div class="pareto-wrap"><h3 style="text-align:center">Pareto de causas de indisponibilidade</h3>
    <p class="desc" style="text-align:center;margin-left:auto;margin-right:auto">Vazamentos e pneus somam mais da metade das ocorrências — o alvo do plano de preventivas da frota nova.</p>${paretoSvg()}</div></div>
-  <div class="painel"><h3>Histórico por máquina</h3><div class="tbl-scroll"><table><thead><tr><th>Máquina</th><th>Situação no quadro</th><th class="num">Paradas</th><th class="num">Ciclos</th><th class="num">Horas paradas</th><th class="num">Pior caso</th></tr></thead>
-  <tbody>${Object.entries(D.tag_stats).filter(([,s])=>s.paradas>0||s.ciclos>0).sort((a,b)=>b[1].horas_total-a[1].horas_total).slice(0,14).map(([t,s])=>{const f=D.frota_oficial.find(x=>x.tag.endsWith(t));
-   const sit=f?(f.vig=='ago'?'saiu na renovação':(f.sub1510?'sai até 15/10':f.papel)):'fora do quadro';
-   return `<tr><td class="cel-main">${nome(t)}</td><td style="color:${f&&f.sub1510?'var(--rocha)':'var(--muted)'}">${sit}</td><td class="num">${s.paradas}</td><td class="num">${s.ciclos}</td><td class="num">${s.horas_total?s.horas_total.toFixed(0)+'h':'—'}</td><td class="num">${s.pior?fmtH(s.pior):'—'}</td></tr>`}).join('')}</tbody></table></div></div>`,
- subst:`<div class="kpis">${kpi(D.subst.length,'substituições comunicadas')}${kpi(D.cobertas,'paradas com cobertura confirmada','bom')}${kpi('2h','SLA contratual')}</div>
-  <div class="painel"><h3>Coberturas por reserva · comunicadas nos grupos</h3>
-   <p class="desc" style="max-width:86ch">Lição TIPLAM aplicada: cobertura só vira compensação de disponibilidade com <b>início e fim</b> confirmados — registro órfão (sem fim) gera hora de compensação fantasma e é auditado antes de contar. Hoje a detecção é por leitura dos grupos; a fase 2 estrutura isso em tabela própria com autorização formal, como no TIPLAM.</p>
-   <div class="tbl-scroll"><table><thead><tr><th>Data</th><th>Grupo</th><th>Máquinas</th><th>Comunicado por</th><th>Mensagem</th></tr></thead>
-   <tbody>${D.subst.map(s=>`<tr><td class="num">${s.dt.slice(8,10)}/${s.dt.slice(5,7)} ${s.dt.slice(11,16)}</td><td>${gN[s.grupo]}</td><td class="cel-main">${s.tags.map(t=>nome(t)).join(' → ')}</td><td style="color:var(--muted)">${(s.autor||'—').replace('~','').trim()}</td><td style="color:var(--muted);font-size:12px">${s.msg.replace(/</g,'&lt;')}</td></tr>`).join('')}</tbody></table></div></div>
-  <div id="subst-pool"></div>`,
+  <div class="painel"><h3>Horas de indisponibilidade por semana</h3><p class="desc">A tendência que a renovação da frota precisa dobrar para baixo.</p>${semanalSvg()}</div>
+  <div class="painel"><h3>Top 10 máquinas por horas paradas</h3><p class="desc">Cinza = máquina que já saiu do quadro; laranja = frota atual.</p>${top10Svg()}</div>`,
  frota:`<div class="kpis">${kpi('28 + 7','titulares + reservas atuais')}${kpi('3','indisponíveis hoje','ruim')}${kpi('7','saem até 15/10','destaque')}${kpi('2','saíram na renovação de setembro')}</div>
   ${['Armazém','Porto'].map(loc=>[...new Set(frotaAtual().filter(f=>f.local==loc).map(f=>f.fam))].map(fam=>{
     const ms=frotaAtual().filter(f=>f.local==loc&&f.fam==fam);const tit=ms.filter(m=>m.papel=='Titular').length;
@@ -975,13 +1056,12 @@ const HTMLP={
    <p id="mapa-sem" class="desc" style="margin-top:10px"></p>
    <div class="legenda"><span><i style="background:var(--rocha)"></i>Sites da operação</span><span><i style="background:var(--armac)"></i>Máquinas (telemetria)</span></div></div>
   <div class="kpis">${f2('Tempo parado por área e alerta de saída de área','Telemetria','tele')}${f2('Distância percorrida e rotas desnecessárias','Telemetria','tele')}</div>`,
- b4:`<div class="kpis">${kpi(D.abastecimentos_total,'abastecimentos relatados no período')}${kpi(D.abastecimentos_grupo.mini,'no grupo Mini carregadeira')}${kpi(D.abastecimentos_grupo.armazem,'no grupo Armazém')}${f2('Consumo médio, l/h e custo por equipamento','Telemetria','tele')}${f2('Consumo por turno e fora do padrão','Telemetria','tele')}</div>
-  <div class="painel"><h3>Da menção ao litro</h3><p class="desc" style="max-width:82ch">Hoje o abastecimento aparece nos grupos como comunicação. Com telemetria e registro estruturado, cada menção vira litros, hora e custo — e o comparativo entre máquinas iguais expõe consumo fora do padrão automaticamente. Detalhamento na próxima etapa.</p></div>`,
  b5:`<div class="kpis">${f2('Produção e ciclos por equipamento','IA de fotos','ia')}${f2('Tempo de ciclo e produtividade por hora','IA de fotos','ia')}${f2('Horas produtivas × improdutivas','Telemetria','tele')}</div>
   <div class="painel"><h3>O dado de produção já circula no grupo — em foto</h3><p class="desc" style="max-width:82ch">Os operadores do Porto postam, todo turno, fotos dos contadores das máquinas. A leitura dessas fotos por IA — arquitetura já validada pela ARMAC — transforma o rito existente em série de produção, ciclo e produtividade, sem mudar nada no campo. Detalhamento na próxima etapa.</p></div>
   <div class="painel"><h3>Comparativo entre turnos · atividade nos grupos</h3>${turnosHtml}</div>
   <div class="painel chart-box"><h3>Pulso da operação</h3>${pulsoSvg()}<div class="legenda"><span><i style="background:#0B3FC4"></i>Armazém</span><span><i style="background:#E86820"></i>Porto</span><span><i style="background:#8B9AB8"></i>Mini</span></div></div>`,
- contrato:`<div class="regras">
+ contrato:`<div class="kpis">${kpi('R$ 1.575.000','valor fixo mensal')}${kpi('48','meses de vigência · 2 ciclos de 24m')}${kpi('28 + 7','titulares + reservas')}${kpi('2h','SLA de substituição')}${kpi('5%','teto de multas / mês')}${kpi('R$ 61.750','adicional set/out (transição)')}</div>
+  <div class="regras">
   <div class="regra"><b>Substituição em 2h</b><p>Máquina avariada substituída pela reserva em até 2h. Reserva quebrada junto: 4h. A partir da 4ª máquina no GIMPO: 6h. Multa 0,4% da medição por ocorrência.</p></div>
   <div class="regra"><b>Disponibilidade GIMPO</b><p>Mínimo 95% por posição em 3 turnos, 97% em até 2 turnos. Multa 0,4% da medição a cada 1% abaixo.</p></div>
   <div class="regra"><b>Disponibilidade OPR (navio)</b><p>97% sobre o tempo total de descarga dos navios no mês. Mau uso da contratante não conta contra a ARMAC.</p></div>
@@ -1003,13 +1083,6 @@ const HTMLP={
 const cont=document.getElementById('paginas');
 cont.innerHTML=PAGINAS.map(p=>`<div class="pagina" id="pg-${p.id}">${HTMLP[p.id]}</div>`).join('');
 
-// cards da Apresentação Cliente (período em andamento)
-(function(){const R=D.RESP['set'];const el=document.getElementById('cli-fams');
- if(el) el.innerHTML='<div class="fam-grid">'+Object.entries(R).map(([n,f])=>{const c=dispColorR(f.d_fin,f.meta);
-  return `<div class="fam-card" style="cursor:default"><b style="font-size:13px">${n}</b><div class="num" style="font-size:26px;font-weight:800;color:${c};margin:6px 0 2px">${f.d_fin.toFixed(1).replace('.',',')}%</div><div style="font-size:11px;color:var(--muted)">meta ${f.meta}% · setembro parcial</div></div>`;}).join('')+'</div>';})();
-// pool por família na página de substituições
-(function(){const R=D.RESP[perAtual];const el=document.getElementById('subst-pool');
- if(el) el.innerHTML=`<div class="painel"><h3>Pool de compensação · ${D.PERIODOS.find(p=>p.id==perAtual).label}</h3><div class="tbl-scroll"><table><thead><tr><th>Família</th><th class="num">Pool disponível</th><th class="num">Usado</th><th class="num">Ocioso</th></tr></thead><tbody>${Object.entries(R).map(([n,f])=>`<tr><td class="cel-main">${n}</td><td class="num">${f.pool_tot.toFixed(0)}h</td><td class="num">${f.pool_usado.toFixed(0)}h</td><td class="num" style="color:${f.pool_tot-f.pool_usado>0&&f.h_ind>0?'var(--red)':'var(--muted)'}">${(f.pool_tot-f.pool_usado).toFixed(0)}h</td></tr>`).join('')}</tbody></table></div></div>`;})();
 
 // ===== mapa =====
 const MAPA_URI='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAwIDcwMCI+PHJlY3Qgd2lkdGg9IjEyMDAiIGhlaWdodD0iNzAwIiBmaWxsPSIjQ0JEREVBIi8+CjxwYXRoIGQ9Ik0wLDAgSDEyMDAgVjYwIFExMDgwLDk1IDk4MCwxMzAgUTg3MCwxNzAgNzYwLDIwMCBRNjQwLDIzMiA1MjAsMjUyIFEzODAsMjcyIDI0MCwyOTAgUTEyMCwzMDIgMCwzMTggWiIgZmlsbD0iI0NCRERFQSIvPgo8cGF0aCBkPSJNMCw3MDAgVjMzMCBRMTQwLDMxNSAzMDAsMzAwIFE0NzAsMjgzIDYyMCwyNTggUTc2MCwyMzUgODgwLDIwMCBRMTAxMCwxNjAgMTEyMCwxMTUgTDEyMDAsODUgVjcwMCBaIiBmaWxsPSIjRURFQkUzIi8+CjxwYXRoIGQ9Ik03MzguMCw3NC4zIGg0MjAgdjE0IGgtNDIwIHoiIGZpbGw9IiNEOEQzQzQiLz4KPGcgZmlsbD0iI0I3QzdENiI+PHJlY3QgeD0iNzU4LjAiIHk9IjUyLjMiIHdpZHRoPSI4IiBoZWlnaHQ9IjIyIi8+PHJlY3QgeD0iODE4LjAiIHk9IjUyLjMiIHdpZHRoPSI4IiBoZWlnaHQ9IjIyIi8+PHJlY3QgeD0iODc4LjAiIHk9IjUyLjMiIHdpZHRoPSI4IiBoZWlnaHQ9IjIyIi8+PHJlY3QgeD0iOTM4LjAiIHk9IjUyLjMiIHdpZHRoPSI4IiBoZWlnaHQ9IjIyIi8+PHJlY3QgeD0iOTk4LjAiIHk9IjUyLjMiIHdpZHRoPSI4IiBoZWlnaHQ9IjIyIi8+PHJlY3QgeD0iMTA1OC4wIiB5PSI1Mi4zIiB3aWR0aD0iOCIgaGVpZ2h0PSIyMiIvPjxyZWN0IHg9IjExMTguMCIgeT0iNTIuMyIgd2lkdGg9IjgiIGhlaWdodD0iMjIiLz48L2c+CjxnIHN0cm9rZT0iI0ZGRkZGRiIgc3Ryb2tlLXdpZHRoPSI2IiBmaWxsPSJub25lIiBvcGFjaXR5PSIuOSI+PHBhdGggZD0iTTAsNTYwIFEyNTAsNTIwIDQ4MCw0NzAgUTcwMCw0MjAgOTAwLDM0MCIvPjxwYXRoIGQ9Ik00ODAsNDcwIFE1MDAsNTYwIDU0MCw2NjAiLz48L2c+CjxnIGZvbnQtZmFtaWx5PSJJbnRlcixBcmlhbCI+PHRleHQgeD0iNzAiIHk9IjY1MCIgZm9udC1zaXplPSIyNiIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iIzc3ODA4RiI+UEFSQU5BR1VBPC90ZXh0Pgo8dGV4dCB4PSI3NjAiIHk9IjkwIiBmb250LXNpemU9IjIwIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjN0ZBMEJDIj5CYWlhIGRlIFBhcmFuYWd1YTwvdGV4dD4KPHRleHQgeD0iNzU4LjAiIHk9IjQ0LjMiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM5QUE0QjQiPkNBSVMgLSBQT1JUTyBELiBQRURSTyBJSTwvdGV4dD4KPHRleHQgeD0iMTIwIiB5PSI1NjAiIGZvbnQtc2l6ZT0iMTMiIGZpbGw9IiM4QTkzQTMiPkFsZXhhbmRyYSAvIFBSLTQwNzwvdGV4dD48L2c+PC9zdmc+';
@@ -1066,8 +1139,11 @@ function abrir(id){
  if(id=='resumo')renderResumo();
  if(id=='porfamilia')renderMed();
  if(id=='statusagora')renderStatus();
+ if(id=='paradas')renderParadas();
+ if(id=='pareto')renderParetoTab();
  if(id=='checklists')renderChk();
  if(id=='mapa')setTimeout(initMapa,60);
+ sortAll(document.getElementById('pg-'+id));
 }
 document.querySelectorAll('aside > button').forEach(b=>b.addEventListener('click',()=>abrir(b.dataset.p)));
 abrir('resumo');
