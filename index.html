@@ -38,6 +38,7 @@ main{flex:1;padding:18px 30px 50px;max-width:1220px}
 .subtabs{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;margin:0 0 16px;padding:5px;background:var(--trilho);border-radius:12px;width:max-content;max-width:100%}
 .subtabs button{padding:8px 18px;font-size:12.5px;font-weight:700;cursor:pointer;border:none;border-radius:9px;background:transparent;color:var(--muted);white-space:nowrap;font-family:inherit;transition:background .15s,color .15s,box-shadow .15s}
 .subtabs button:hover{color:var(--title)} .subtabs button.on{background:var(--card);color:var(--title);box-shadow:0 1px 4px rgba(216,90,18,.22)}
+.subpg{display:none}.subpg.on{display:block}
 .filtros{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
 .filtros select{border:1px solid var(--border);background:var(--card);color:var(--text);padding:7px 10px;border-radius:8px;font-size:13px;font-family:inherit}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
@@ -819,10 +820,7 @@ const PAGINAS=[
  {id:'pareto',grupo:'Operação',nome:'Pareto de Quebras',sub:'MTBF e MTTR por máquina, causas e tendências de indisponibilidade'},
  {id:'checklists',grupo:'Operação',nome:'Checklists',sub:'Disciplina de checklist por máquina, com filtros'},
  {id:'mapa',grupo:'Operação',nome:'Localização',sub:'Onde a frota está — Paranaguá, Porto e Armazéns'},
- {id:'b5',rot:'Fase 2',grupo:'Fase 2',nome:'Performance',sub:'Produção, ciclos e produtividade'},
- {id:'frota',rot:'Contrato',grupo:'Contrato 27385',nome:'Gestão de Frota',sub:'Titulares e reservas por família, vigência e renovação'},
- {id:'contrato',grupo:'Contrato 27385',nome:'Resumo Contrato',sub:'Os números e as regras do contrato 27385 em linguagem de operação'},
- {id:'metodo',grupo:'Contrato 27385',nome:'Metodologia',sub:'Como estes números são produzidos — e as regras que nunca quebramos'},
+ {id:'contrato',rot:'Contrato',grupo:'Contrato 27385',nome:'Contrato',sub:'Resumo do contrato, gestão de frota e metodologia'},
 ];
 document.getElementById('menu').innerHTML=`<div class="marca"><div class="logo">${LOGO}</div>
  <div class="nome">CCO Rocha<span class="sub">Paranaguá · PR</span></div></div>`+
@@ -1033,16 +1031,6 @@ const HTMLP={
    <p class="desc" style="text-align:center;margin-left:auto;margin-right:auto">Vazamentos e pneus somam mais da metade das ocorrências — o alvo do plano de preventivas da frota nova.</p>${paretoSvg()}</div></div>
   <div class="painel"><h3>Horas de indisponibilidade por semana</h3><p class="desc">A tendência que a renovação da frota precisa dobrar para baixo.</p>${semanalSvg()}</div>
   <div class="painel"><h3>Top 10 máquinas por horas paradas</h3><p class="desc">Cinza = máquina que já saiu do quadro; laranja = frota atual.</p>${top10Svg()}</div>`,
- frota:`<div class="kpis">${kpi('28 + 7','titulares + reservas atuais')}${kpi('3','indisponíveis hoje','ruim')}${kpi('7','saem até 15/10','destaque')}${kpi('2','saíram na renovação de setembro')}</div>
-  ${['Armazém','Porto'].map(loc=>[...new Set(frotaAtual().filter(f=>f.local==loc).map(f=>f.fam))].map(fam=>{
-    const ms=frotaAtual().filter(f=>f.local==loc&&f.fam==fam);const tit=ms.filter(m=>m.papel=='Titular').length;
-    return `<div class="painel"><h3>${loc} · ${fam} <span class="pill">${tit} titulares · ${ms.length-tit} reservas</span></h3>
-    <div class="tbl-scroll"><table><thead><tr><th>Máquina</th><th>Papel</th><th>Implemento</th><th>Hoje</th><th>Renovação</th><th>SAP</th><th>RxO</th></tr></thead>
-    <tbody>${ms.map(m=>`<tr><td class="cel-main">${m.tag}</td><td>${m.papel=='Reserva'?'<span class="pill">Reserva</span>':'Titular'}</td><td style="color:var(--muted)">${m.imp}</td><td style="font-weight:800;color:${m.ok?'var(--green)':'var(--red)'}">${m.ok?'✓ operando':'✗ indisponível'}</td><td style="color:${m.sub1510?'var(--rocha)':'var(--muted)'}">${m.sub1510?'sai até 15/10':'permanece'}</td><td style="font-size:12px;color:var(--muted)">${m.sap||'—'}</td><td>${m.rxo?'✓':'—'}</td></tr>`).join('')}</tbody></table></div></div>`;}).join('')).join('')}
-  <div class="painel"><h3>Vigência de frota · saíram na renovação (set/2026)</h3>
-   <p class="desc" style="max-width:84ch">Lição TIPLAM: troca de frota não retroage sobre período fechado. PA00207 e PA00448 eram titulares do Armazém em agosto — as paradas delas contam na medição de agosto (97,83% PC 16T), e elas saem do quadro daqui pra frente.</p>
-   <div class="tbl-scroll"><table><thead><tr><th>Máquina</th><th>Família</th><th>Vigência</th><th>SAP</th></tr></thead>
-   <tbody>${D.frota_oficial.filter(f=>f.vig=='ago').map(m=>`<tr><td class="cel-main">${m.tag}</td><td>${m.fam}</td><td style="color:var(--muted)">até ago/2026</td><td style="font-size:12px;color:var(--muted)">${m.sap||'—'}</td></tr>`).join('')}</tbody></table></div></div>`,
  checklists:`<div class="filtros">
    <select id="f-local" onchange="renderChk()"><option value="todos">Local: todos</option><option>Armazém</option><option>Porto</option></select>
    <select id="f-tipo" onchange="renderChk()"><option value="todos">Equipamento: todos</option>${FAMS.map(f=>`<option>${f}</option>`).join('')}</select></div>
@@ -1056,11 +1044,7 @@ const HTMLP={
    <p id="mapa-sem" class="desc" style="margin-top:10px"></p>
    <div class="legenda"><span><i style="background:var(--rocha)"></i>Sites da operação</span><span><i style="background:var(--armac)"></i>Máquinas (telemetria)</span></div></div>
   <div class="kpis">${f2('Tempo parado por área e alerta de saída de área','Telemetria','tele')}${f2('Distância percorrida e rotas desnecessárias','Telemetria','tele')}</div>`,
- b5:`<div class="kpis">${f2('Produção e ciclos por equipamento','IA de fotos','ia')}${f2('Tempo de ciclo e produtividade por hora','IA de fotos','ia')}${f2('Horas produtivas × improdutivas','Telemetria','tele')}</div>
-  <div class="painel"><h3>O dado de produção já circula no grupo — em foto</h3><p class="desc" style="max-width:82ch">Os operadores do Porto postam, todo turno, fotos dos contadores das máquinas. A leitura dessas fotos por IA — arquitetura já validada pela ARMAC — transforma o rito existente em série de produção, ciclo e produtividade, sem mudar nada no campo. Detalhamento na próxima etapa.</p></div>
-  <div class="painel"><h3>Comparativo entre turnos · atividade nos grupos</h3>${turnosHtml}</div>
-  <div class="painel chart-box"><h3>Pulso da operação</h3>${pulsoSvg()}<div class="legenda"><span><i style="background:#0B3FC4"></i>Armazém</span><span><i style="background:#E86820"></i>Porto</span><span><i style="background:#8B9AB8"></i>Mini</span></div></div>`,
- contrato:`<div class="kpis">${kpi('R$ 1.575.000','valor fixo mensal')}${kpi('48','meses de vigência · 2 ciclos de 24m')}${kpi('28 + 7','titulares + reservas')}${kpi('2h','SLA de substituição')}${kpi('5%','teto de multas / mês')}${kpi('R$ 61.750','adicional set/out (transição)')}</div>
+ contrato:`<div class="subtabs" id="ct-tabs"><button data-s="resumo" class="on">Resumo do contrato</button><button data-s="frota">Gestão de Frota</button><button data-s="metodo">Metodologia</button></div><div class="subpg on" id="ct-resumo"><div class="kpis">${kpi('R$ 1.575.000','valor fixo mensal')}${kpi('48','meses de vigência · 2 ciclos de 24m')}${kpi('28 + 7','titulares + reservas')}${kpi('2h','SLA de substituição')}${kpi('5%','teto de multas / mês')}${kpi('R$ 61.750','adicional set/out (transição)')}</div>
   <div class="regras">
   <div class="regra"><b>Substituição em 2h</b><p>Máquina avariada substituída pela reserva em até 2h. Reserva quebrada junto: 4h. A partir da 4ª máquina no GIMPO: 6h. Multa 0,4% da medição por ocorrência.</p></div>
   <div class="regra"><b>Disponibilidade GIMPO</b><p>Mínimo 95% por posição em 3 turnos, 97% em até 2 turnos. Multa 0,4% da medição a cada 1% abaixo.</p></div>
@@ -1069,8 +1053,16 @@ const HTMLP={
   <div class="regra"><b>Frota nova</b><p>Idade máxima 2 anos, substituição integral a cada 24 meses, telemetria original embarcada (Cl. 1.1h).</p></div>
   <div class="regra"><b>Transição set/out 2026</b><p>Acréscimo de R$ 61.750/mês em setembro e outubro pelas 10 titulares dos armazéns.</p></div>
   <div class="regra"><b>Teto de penalidades</b><p>Multas por substituição e disponibilidade limitadas a 5% da fatura do mês.</p></div>
-  <div class="regra"><b>Equipe credenciada</b><p>Equipe e frota cadastradas na APPA antes do início; 100% dos operadores com treinamentos e EPIs em dia.</p></div></div>`,
- metodo:`<div class="painel"><h3>Como estes números nascem</h3>
+  <div class="regra"><b>Equipe credenciada</b><p>Equipe e frota cadastradas na APPA antes do início; 100% dos operadores com treinamentos e EPIs em dia.</p></div></div></div><div class="subpg" id="ct-frota"><div class="kpis">${kpi('28 + 7','titulares + reservas atuais')}${kpi('3','indisponíveis hoje','ruim')}${kpi('7','saem até 15/10','destaque')}${kpi('2','saíram na renovação de setembro')}</div>
+  ${['Armazém','Porto'].map(loc=>[...new Set(frotaAtual().filter(f=>f.local==loc).map(f=>f.fam))].map(fam=>{
+    const ms=frotaAtual().filter(f=>f.local==loc&&f.fam==fam);const tit=ms.filter(m=>m.papel=='Titular').length;
+    return `<div class="painel"><h3>${loc} · ${fam} <span class="pill">${tit} titulares · ${ms.length-tit} reservas</span></h3>
+    <div class="tbl-scroll"><table><thead><tr><th>Máquina</th><th>Papel</th><th>Implemento</th><th>Hoje</th><th>Renovação</th><th>SAP</th><th>RxO</th></tr></thead>
+    <tbody>${ms.map(m=>`<tr><td class="cel-main">${m.tag}</td><td>${m.papel=='Reserva'?'<span class="pill">Reserva</span>':'Titular'}</td><td style="color:var(--muted)">${m.imp}</td><td style="font-weight:800;color:${m.ok?'var(--green)':'var(--red)'}">${m.ok?'✓ operando':'✗ indisponível'}</td><td style="color:${m.sub1510?'var(--rocha)':'var(--muted)'}">${m.sub1510?'sai até 15/10':'permanece'}</td><td style="font-size:12px;color:var(--muted)">${m.sap||'—'}</td><td>${m.rxo?'✓':'—'}</td></tr>`).join('')}</tbody></table></div></div>`;}).join('')).join('')}
+  <div class="painel"><h3>Vigência de frota · saíram na renovação (set/2026)</h3>
+   <p class="desc" style="max-width:84ch">Lição TIPLAM: troca de frota não retroage sobre período fechado. PA00207 e PA00448 eram titulares do Armazém em agosto — as paradas delas contam na medição de agosto (97,83% PC 16T), e elas saem do quadro daqui pra frente.</p>
+   <div class="tbl-scroll"><table><thead><tr><th>Máquina</th><th>Família</th><th>Vigência</th><th>SAP</th></tr></thead>
+   <tbody>${D.frota_oficial.filter(f=>f.vig=='ago').map(m=>`<tr><td class="cel-main">${m.tag}</td><td>${m.fam}</td><td style="color:var(--muted)">até ago/2026</td><td style="font-size:12px;color:var(--muted)">${m.sap||'—'}</td></tr>`).join('')}</tbody></table></div></div></div><div class="subpg" id="ct-metodo"><div class="painel"><h3>Como estes números nascem</h3>
   <p class="desc" style="max-width:84ch">Indicadores gerados por leitura automatizada (IA) das mensagens dos três grupos oficiais de WhatsApp (3.859 mensagens, 01/08 a 21/09/2026), cruzadas com a frota contratual, o histórico SAP e a telemetria ARMAC. MTBF = horas-calendário das posições ÷ falhas relatadas; MTTR = mediana dos ciclos parada→liberação.</p></div>
   <div class="painel"><h3>Regras que nunca quebramos · lições do TIPLAM</h3>
   <p class="desc" style="max-width:84ch"><b>1. Medição oficial não se recalcula.</b> Quando a medição da Cláusula 3.1.3 chegar, ela é transcrita como dado do cliente — este painel a confronta, nunca a substitui.<br>
@@ -1078,7 +1070,7 @@ const HTMLP={
   <b>3. Cobertura sem fim não compensa.</b> Substituição só vira hora de compensação com início e fim confirmados — registro órfão é auditado antes de contar.<br>
   <b>4. Paradas em aberto contam.</b> Máquina parada sem liberação comunicada acumula indisponibilidade até hoje, não desaparece do mês.<br>
   <b>5. Deploy validado por conteúdo.</b> Toda publicação deste painel é conferida byte a byte contra o gerado — nunca só pelo status HTTP.</p></div>
- <footer>CCO Rocha v3 · ARMAC Locação, Logística e Serviços S.A. · contrato 27385 · gerado em ${D.gerado_em}</footer>`
+ <footer>CCO Rocha v3 · ARMAC Locação, Logística e Serviços S.A. · contrato 27385 · gerado em ${D.gerado_em}</footer></div>`
 };
 const cont=document.getElementById('paginas');
 cont.innerHTML=PAGINAS.map(p=>`<div class="pagina" id="pg-${p.id}">${HTMLP[p.id]}</div>`).join('');
@@ -1145,6 +1137,11 @@ function abrir(id){
  if(id=='mapa')setTimeout(initMapa,60);
  sortAll(document.getElementById('pg-'+id));
 }
+(function(){const tabs=document.getElementById('ct-tabs'); if(!tabs)return;
+ tabs.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+  tabs.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x==b));
+  ['resumo','frota','metodo'].forEach(k=>document.getElementById('ct-'+k).classList.toggle('on',k==b.dataset.s));
+ }));})();
 document.querySelectorAll('aside > button').forEach(b=>b.addEventListener('click',()=>abrir(b.dataset.p)));
 abrir('resumo');
 </script>
