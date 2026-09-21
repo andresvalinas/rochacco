@@ -1038,13 +1038,7 @@ const HTMLP={
   <div class="painel"><h3>Disciplina de checklist · frota contratual</h3>
    <p class="desc">Checklists de turno postados nos grupos (foto + TAG). Máquinas novas ainda sem registro aparecem com "—" até entrarem no rito.</p>
    <div class="tbl-scroll"><table><thead><tr><th>Máquina</th><th>Local</th><th>Família</th><th>Papel</th><th>Hoje</th><th class="num">Checklists</th><th class="num">Dias c/ registro</th><th class="num">Cobertura</th></tr></thead><tbody id="tb-chk"></tbody></table></div></div>`,
- mapa:`<div class="painel"><h3>Paranaguá · mapa da operação</h3>
-   <p class="desc" style="max-width:84ch">${LIVE?'Posições ao vivo da telemetria ARMAC, um pino por máquina, atualizando a cada 60 segundos. Verde = sinal recente · cinza = sinal antigo (>48h) · vermelho = máquina indisponível. Círculos laranja marcam os dois sites.':'Posições reais da telemetria ARMAC — snapshot embutido nesta versão. Na versão hospedada esta tela é tempo real, com tiles de mapa e refresh automático. Repare na PA01494: fora dos sites, na região de Alexandra — a máquina em avaliação de garantia.'}</p>
-   <div id="mapa-status" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
-   <div id="mapa-rocha"></div>
-   <p id="mapa-sem" class="desc" style="margin-top:10px"></p>
-   <div class="legenda"><span><i style="background:var(--rocha)"></i>Sites da operação</span><span><i style="background:var(--armac)"></i>Máquinas (telemetria)</span></div></div>
-  <div class="kpis">${f2('Tempo parado por área e alerta de saída de área','Telemetria','tele')}${f2('Distância percorrida e rotas desnecessárias','Telemetria','tele')}</div>`,
+ mapa:`<div id="loc-conteudo"></div>`,
  contrato:`<div class="subtabs" id="ct-tabs"><button data-s="resumo" class="on">Resumo do contrato</button><button data-s="frota">Gestão de Frota</button><button data-s="metodo">Metodologia</button></div><div class="subpg on" id="ct-resumo"><div class="kpis">${kpi('R$ 1.575.000','valor fixo mensal')}${kpi('48','meses de vigência · 2 ciclos de 24m')}${kpi('28 + 7','titulares + reservas')}${kpi('2h','SLA de substituição')}${kpi('5%','teto de multas / mês')}${kpi('R$ 61.750','adicional set/out (transição)')}</div>
   <div class="regras">
   <div class="regra"><b>Substituição em 2h</b><p>Máquina avariada substituída pela reserva em até 2h. Reserva quebrada junto: 4h. A partir da 4ª máquina no GIMPO: 6h. Multa 0,4% da medição por ocorrência.</p></div>
@@ -1079,49 +1073,105 @@ cont.innerHTML=PAGINAS.map(p=>`<div class="pagina" id="pg-${p.id}">${HTMLP[p.id]
 
 // ===== mapa =====
 const MAPA_URI='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAwIDcwMCI+PHJlY3Qgd2lkdGg9IjEyMDAiIGhlaWdodD0iNzAwIiBmaWxsPSIjQ0JEREVBIi8+CjxwYXRoIGQ9Ik0wLDAgSDEyMDAgVjYwIFExMDgwLDk1IDk4MCwxMzAgUTg3MCwxNzAgNzYwLDIwMCBRNjQwLDIzMiA1MjAsMjUyIFEzODAsMjcyIDI0MCwyOTAgUTEyMCwzMDIgMCwzMTggWiIgZmlsbD0iI0NCRERFQSIvPgo8cGF0aCBkPSJNMCw3MDAgVjMzMCBRMTQwLDMxNSAzMDAsMzAwIFE0NzAsMjgzIDYyMCwyNTggUTc2MCwyMzUgODgwLDIwMCBRMTAxMCwxNjAgMTEyMCwxMTUgTDEyMDAsODUgVjcwMCBaIiBmaWxsPSIjRURFQkUzIi8+CjxwYXRoIGQ9Ik03MzguMCw3NC4zIGg0MjAgdjE0IGgtNDIwIHoiIGZpbGw9IiNEOEQzQzQiLz4KPGcgZmlsbD0iI0I3QzdENiI+PHJlY3QgeD0iNzU4LjAiIHk9IjUyLjMiIHdpZHRoPSI4IiBoZWlnaHQ9IjIyIi8+PHJlY3QgeD0iODE4LjAiIHk9IjUyLjMiIHdpZHRoPSI4IiBoZWlnaHQ9IjIyIi8+PHJlY3QgeD0iODc4LjAiIHk9IjUyLjMiIHdpZHRoPSI4IiBoZWlnaHQ9IjIyIi8+PHJlY3QgeD0iOTM4LjAiIHk9IjUyLjMiIHdpZHRoPSI4IiBoZWlnaHQ9IjIyIi8+PHJlY3QgeD0iOTk4LjAiIHk9IjUyLjMiIHdpZHRoPSI4IiBoZWlnaHQ9IjIyIi8+PHJlY3QgeD0iMTA1OC4wIiB5PSI1Mi4zIiB3aWR0aD0iOCIgaGVpZ2h0PSIyMiIvPjxyZWN0IHg9IjExMTguMCIgeT0iNTIuMyIgd2lkdGg9IjgiIGhlaWdodD0iMjIiLz48L2c+CjxnIHN0cm9rZT0iI0ZGRkZGRiIgc3Ryb2tlLXdpZHRoPSI2IiBmaWxsPSJub25lIiBvcGFjaXR5PSIuOSI+PHBhdGggZD0iTTAsNTYwIFEyNTAsNTIwIDQ4MCw0NzAgUTcwMCw0MjAgOTAwLDM0MCIvPjxwYXRoIGQ9Ik00ODAsNDcwIFE1MDAsNTYwIDU0MCw2NjAiLz48L2c+CjxnIGZvbnQtZmFtaWx5PSJJbnRlcixBcmlhbCI+PHRleHQgeD0iNzAiIHk9IjY1MCIgZm9udC1zaXplPSIyNiIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iIzc3ODA4RiI+UEFSQU5BR1VBPC90ZXh0Pgo8dGV4dCB4PSI3NjAiIHk9IjkwIiBmb250LXNpemU9IjIwIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjN0ZBMEJDIj5CYWlhIGRlIFBhcmFuYWd1YTwvdGV4dD4KPHRleHQgeD0iNzU4LjAiIHk9IjQ0LjMiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM5QUE0QjQiPkNBSVMgLSBQT1JUTyBELiBQRURSTyBJSTwvdGV4dD4KPHRleHQgeD0iMTIwIiB5PSI1NjAiIGZvbnQtc2l6ZT0iMTMiIGZpbGw9IiM4QTkzQTMiPkFsZXhhbmRyYSAvIFBSLTQwNzwvdGV4dD48L2c+PC9zdmc+';
-let mapaInit=false, mapaLayer=null, mapaObj=null;
-function idade(dt){const ms=Date.now()-new Date(dt).getTime();const hh=ms/36e5;return hh<1?Math.round(hh*60)+' min':hh<48?hh.toFixed(0)+' h':Math.round(hh/24)+' dias';}
-async function atualizaMapa(){
- if(!mapaObj)return;
- const tags=frotaAtual().map(f=>f.tag).join(',');
- let rows=[];
- try{const r=await fetch(SUPA_URL+'/rest/v1/v_cco_frota_mapa?select=ativo,latitude,longitude,location_datetime&ativo=in.('+tags+')',{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});rows=await r.json();}
- catch(e){const s=document.getElementById('mapa-status');if(s)s.textContent='⚠️ sem conexão com o banco — última tela mantida';return;}
- if(mapaLayer)mapaLayer.remove(); mapaLayer=L.layerGroup().addTo(mapaObj);
- const com=new Set();
- rows.forEach(p=>{const f=frotaAtual().find(x=>x.tag==p.ativo);if(!f||!p.latitude)return;com.add(p.ativo);
-  const hh=(Date.now()-new Date(p.location_datetime).getTime())/36e5;
-  const cor=!f.ok?'#d63131':hh>48?'#8B9AB8':'#00A843';
-  L.circleMarker([+p.latitude,+p.longitude],{radius:f.papel=='Reserva'?7:9,color:'#FFF',weight:2,fillColor:cor,fillOpacity:.95}).addTo(mapaLayer)
-   .bindPopup('<b>'+f.tag+'</b> · '+f.fam+(f.papel=='Reserva'?' <span style="color:#6B7688">(reserva)</span>':'')+'<br>'+f.local+' · '+(f.ok?'<span style="color:#00A843">operando</span>':'<span style="color:#d63131">indisponível</span>')+'<br><span style="color:#6B7688">sinal há '+idade(p.location_datetime)+'</span>');});
- const sem=frotaAtual().filter(f=>!com.has(f.tag));
- const s=document.getElementById('mapa-status');if(s)s.innerHTML='🟢 <b>'+com.size+'</b> máquinas com telemetria · atualizado '+new Date().toLocaleTimeString('pt-BR').slice(0,5)+' · refresh 60s';
- const ms=document.getElementById('mapa-sem');if(ms)ms.innerHTML=sem.length?('Sem sinal ('+sem.length+'): '+sem.map(f=>f.tag).join(' · ')):'';
+let locInit=false, locMapa=null, locLayer=null, locRows=null;
+const escT=s=>String(s==null?'':s).replace(/</g,'&lt;');
+const EMOJI=f=>f.fam&&f.fam.startsWith('ES')?'⛏️':f.fam=='Empilhadeira 3,5T'?'🏗️':'🚜';
+const diasDe=d=>d?Math.floor((Date.now()-new Date(d).getTime())/864e5):999;
+function pinoGota(cor,emoji){return L.divIcon({className:'',iconSize:[30,30],iconAnchor:[15,30],popupAnchor:[0,-28],
+ html:`<div style="width:28px;height:28px;background:${cor};border:2px solid #fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 6px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);font-size:13px;line-height:1">${emoji}</span></div>`});}
+function locTabela(rows){
+ const idx=Object.fromEntries((rows||[]).map(r=>[r.ativo,r]));
+ const semSinal=frotaAtual().filter(f=>!idx[f.tag]);
+ const chips=[...new Set(frotaAtual().map(f=>f.fam))].map(fam=>{
+  const n=frotaAtual().filter(f=>f.fam==fam&&idx[f.tag]).length, t=frotaAtual().filter(f=>f.fam==fam).length;
+  return `<span style="display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;color:var(--title)">${n}/${t} <span style="font-weight:600;color:var(--muted)">${fam}</span></span>`;}).join(' ');
+ const linhas=frotaAtual().map(f=>{
+  const g=idx[f.tag];
+  const dt=g&&(g.location_datetime||g.snapshot_date);
+  const dtTxt=dt?new Date(dt).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):null;
+  const fonte=g?String(g.location_source||'?').toUpperCase():'—';
+  const hor=g&&g.hourmeter?Math.round(+g.hourmeter).toLocaleString('pt-BR')+' h':'—';
+  const busca=[f.tag,f.fam,f.local,f.papel,fonte,g&&g.description||''].join(' ').toLowerCase();
+  return `<tr data-busca="${busca}"><td><div class="cel-main">${f.tag}</div><div style="font-size:11px;color:var(--muted)">${escT(g&&g.description||f.imp||'')}</div></td>
+   <td style="color:var(--muted)">${f.fam}${f.papel=='Reserva'?' <span class="pill">R</span>':''}</td>
+   <td>${f.local}</td>
+   <td style="font-weight:800;color:${f.ok?'var(--green)':'var(--red)'}">${f.ok?'✓':'✗'}</td>
+   <td class="num">${hor}</td>
+   <td class="num">${dtTxt||'<span style="background:#FDE8E8;color:var(--red);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">sem sinal</span>'}</td>
+   <td>${fonte}</td></tr>`;}).join('');
+ return `<div class="kpis">
+  ${kpi((frotaAtual().length-semSinal.length)+' de '+frotaAtual().length,'máquinas no mapa','bom')}
+  ${kpi(semSinal.length,'sem rastreamento',semSinal.length>frotaAtual().length*0.4?'ruim':'destaque')}
+  ${kpi(LIVE?'60s':'—','refresh do mapa')}</div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 14px">${chips}</div>
+ <div class="painel"><h3>Ativos do contrato (${frotaAtual().length})</h3>
+  <p class="desc">Digite para filtrar; clique nos títulos para ordenar — a coluna Última posição denuncia quem está sem sinal.</p>
+  <div class="filtros"><input id="loc-busca" placeholder="🔎 Buscar máquina, família, fonte…" style="border:1px solid var(--border);background:var(--card);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;font-family:inherit;width:300px"
+   oninput="const q=this.value.toLowerCase();document.querySelectorAll('#tb-loc tbody tr').forEach(tr=>tr.style.display=tr.dataset.busca.includes(q)?'':'none')"></div>
+  <div class="tbl-scroll"><table id="tb-loc"><thead><tr><th>Máquina</th><th>Família</th><th>Local</th><th>Hoje</th><th class="num">Horímetro</th><th class="num">Última posição</th><th>Fonte</th></tr></thead><tbody>${linhas}</tbody></table></div></div>
+ <div class="painel"><h3>Frota no mapa</h3>
+  <div class="desc">Clique no pino para detalhes. Verde = motor ligado · cinza = desligado · azul = sem info de motor · vermelho = sem sinal há 7+ dias. ${LIVE?'Camadas no canto: Mapa / Satélite / Cinza.':'Snapshot embutido — tempo real na versão hospedada.'}</div>
+  <div id="mapa-status" style="font-size:12px;color:var(--muted);margin:4px 0 8px"></div>
+  <div id="mapa-rocha"></div></div>`;
 }
-function initMapa(){
- if(mapaInit||typeof L==='undefined'||!document.getElementById('mapa-rocha'))return; mapaInit=true;
- if(LIVE){
-  mapaObj=L.map('mapa-rocha',{zoomSnap:.5}).setView([-25.512,-48.518],14);
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:16,attribution:'Esri'}).addTo(mapaObj);
-  [[-25.5027,-48.5126,'Porto D. Pedro II · APPA'],[-25.507,-48.518,'Armazéns Rocha · R. João Eugênio']].forEach(([la,lo,n])=>L.circleMarker([la,lo],{radius:17,color:'#E86820',weight:2,fill:false,opacity:.7}).addTo(mapaObj).bindTooltip(n));
-  atualizaMapa(); setInterval(atualizaMapa,60000); setInterval(atualizaSinais,120000);
- } else {
-  const LAT0=-25.560,LAT1=-25.494,LNG0=-48.560,LNG1=-48.500,W=1200,Hh=700;
-  const xy=(la,lo)=>[Hh-((1-(la-LAT0)/(LAT1-LAT0))*Hh),(lo-LNG0)/(LNG1-LNG0)*W];
-  const m=L.map('mapa-rocha',{crs:L.CRS.Simple,minZoom:-1,maxZoom:3,zoomSnap:.5,attributionControl:false});
-  L.imageOverlay(MAPA_URI,[[0,0],[Hh,W]]).addTo(m);
-  [[-25.5027,-48.5126,'Porto D. Pedro II · APPA'],[-25.507,-48.518,'Armazéns Rocha · R. João Eugênio']].forEach(([la,lo,n])=>L.circleMarker(xy(la,lo),{radius:18,color:'#E86820',weight:2,fill:false,opacity:.7}).addTo(m).bindTooltip(n));
-  let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
-  Object.entries(D.pos_snap).forEach(([tag,[la,lo,dt]])=>{const f=D.frota_oficial.find(x=>x.tag==tag)||{};
-   const cor=f.ok===false?'#d63131':'#00A843'; const p=xy(la,lo);
-   miny=Math.min(miny,p[0]);maxy=Math.max(maxy,p[0]);minx=Math.min(minx,p[1]);maxx=Math.max(maxx,p[1]);
-   L.circleMarker(p,{radius:f.papel=='Reserva'?6:8,color:'#FFF',weight:2,fillColor:cor,fillOpacity:.95}).addTo(m)
-    .bindPopup('<b>'+tag+'</b> · '+(f.fam||'')+(f.papel=='Reserva'?' <span style="color:#6B7688">(reserva)</span>':'')+'<br>'+(f.ok===false?'<span style="color:#d63131">indisponível</span>':'<span style="color:#00A843">operando</span>')+'<br><span style="color:#6B7688">última posição: '+dt+'</span>');});
-  m.fitBounds([[miny-40,minx-60],[maxy+40,maxx+60]]);
-  const s=document.getElementById('mapa-status');if(s)s.innerHTML='📍 <b>'+Object.keys(D.pos_snap).length+'</b> máquinas com posição real · snapshot '+D.gerado_em+' · <b>tempo real na versão hospedada</b>';
-  const ms=document.getElementById('mapa-sem');if(ms)ms.textContent='Sem telemetria nesta fonte (14): escavadeiras, minis e empilhadeiras — fonte de sinal diferente, em mapeamento.';
- }
+function locPinos(rows){
+ if(!locMapa)return;
+ if(locLayer)locLayer.remove(); locLayer=L.layerGroup().addTo(locMapa);
+ const pts=[];
+ rows.forEach(g=>{
+  const f=frotaAtual().find(x=>x.tag==g.ativo); if(!f||!g.latitude)return;
+  const dd=diasDe(g.location_datetime||g.snapshot_date);
+  const cor=dd>7?'#d63131':g.engine_on===true?'#00A843':g.engine_on===false?'#7A8699':'#0D33A8';
+  const mk=L.marker(LIVE?[+g.latitude,+g.longitude]:xyArt(+g.latitude,+g.longitude),{icon:pinoGota(cor,EMOJI(f))}).addTo(locLayer);
+  mk.bindPopup(`<div style="font-size:12px;line-height:1.55"><b style="color:#D85A12;font-size:13.5px">${f.tag}</b> · ${f.fam}${f.papel=='Reserva'?' (reserva)':''}<br>
+   ${escT(g.description||'')}<br>
+   <b>Status:</b> ${f.ok?'<span style="color:#00A843;font-weight:700">operando</span>':'<span style="color:#d63131;font-weight:700">indisponível</span>'}<br>
+   <b>Motor:</b> ${g.engine_on===true?'<span style="color:#00A843;font-weight:700">Ligado</span>':g.engine_on===false?'Desligado':'—'}${g.speed!=null&&+g.speed>0?` · ${Math.round(+g.speed)} km/h`:''}<br>
+   <b>Horímetro:</b> ${g.hourmeter?(+g.hourmeter).toLocaleString('pt-BR')+' h':'—'}<br>
+   <b>Posição:</b> ${g.location_datetime?new Date(g.location_datetime).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):(g.snapshot_date||'—')} · fonte ${escT(String(g.location_source||'?').toUpperCase())}</div>`,{maxWidth:280});
+  pts.push(LIVE?[+g.latitude,+g.longitude]:xyArt(+g.latitude,+g.longitude));
+ });
+ [[-25.5027,-48.5126,'Porto D. Pedro II · APPA'],[-25.507,-48.518,'Armazéns Rocha · R. João Eugênio']].forEach(([la,lo,n])=>
+  L.circleMarker(LIVE?[la,lo]:xyArt(la,lo),{radius:17,color:'#E86820',weight:2,fill:false,opacity:.7}).addTo(locLayer).bindTooltip(n));
+ if(pts.length&&!locInit){locMapa.fitBounds(pts,{padding:[24,24],maxZoom:LIVE?15:3});locInit=true;}
 }
+const LAT0=-25.560,LAT1=-25.494,LNG0=-48.560,LNG1=-48.500;
+const xyArt=(la,lo)=>[700-((1-(la-LAT0)/(LAT1-LAT0))*700),(lo-LNG0)/(LNG1-LNG0)*1200];
+async function locFetch(){
+ try{
+  const tags=frotaAtual().map(f=>f.tag).join(',');
+  const r=await fetch(SUPA_URL+'/rest/v1/v_cco_frota_mapa?select=ativo,description,latitude,longitude,location_datetime,location_source,hourmeter,engine_on,speed,snapshot_date&ativo=in.('+tags+')',{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
+  return await r.json();
+ }catch(e){return null;}
+}
+async function renderLoc(){
+ const el=document.getElementById('pg-mapa'); if(!el)return;
+ let rows;
+ if(LIVE){ rows=await locFetch(); if(!rows){document.getElementById('loc-conteudo').innerHTML='<div class="painel"><p class="desc">⚠️ Sem conexão com o banco.</p></div>';return;} }
+ else { rows=Object.entries(D.pos_snap).map(([tag,[la,lo,dt]])=>({ativo:tag,latitude:la,longitude:lo,location_datetime:null,snapshot_date:dt,location_source:'snapshot',hourmeter:null,engine_on:null,description:''})); }
+ locRows=rows;
+ document.getElementById('loc-conteudo').innerHTML=locTabela(rows);
+ sortAll(document.getElementById('loc-conteudo'));
+ setTimeout(()=>{
+  if(typeof L==='undefined'||!document.getElementById('mapa-rocha'))return;
+  if(locMapa){locMapa.remove();locMapa=null;locInit=false;}
+  if(LIVE){
+   locMapa=L.map('mapa-rocha',{zoomSnap:.5}).setView([-25.512,-48.518],14);
+   const ruas=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri',maxZoom:18});
+   const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri',maxZoom:18});
+   const cinza=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri',maxZoom:16});
+   ruas.addTo(locMapa);
+   L.control.layers({'Mapa':ruas,'Satélite':sat,'Cinza':cinza},null,{position:'topright'}).addTo(locMapa);
+  } else {
+   locMapa=L.map('mapa-rocha',{crs:L.CRS.Simple,minZoom:-1,maxZoom:3,zoomSnap:.5,attributionControl:false});
+   L.imageOverlay(MAPA_URI,[[0,0],[700,1200]]).addTo(locMapa);
+  }
+  locPinos(rows);
+  const s=document.getElementById('mapa-status');
+  if(s)s.innerHTML=LIVE?('🟢 <b>'+rows.filter(r=>r.latitude).length+'</b> máquinas com telemetria · atualizado '+new Date().toLocaleTimeString('pt-BR').slice(0,5)+' · refresh 60s'):'📍 snapshot de '+D.gerado_em;
+ },60);
+}
+if(LIVE) setInterval(async()=>{if(locMapa){const rows=await locFetch(); if(rows){locRows=rows;locPinos(rows);const s=document.getElementById('mapa-status');if(s)s.innerHTML='🟢 <b>'+rows.filter(r=>r.latitude).length+'</b> máquinas com telemetria · atualizado '+new Date().toLocaleTimeString('pt-BR').slice(0,5)+' · refresh 60s';}}},60000);
 function abrir(id){
  PAGINAS.forEach(p=>document.getElementById('pg-'+p.id).classList.toggle('ativa',p.id===id));
  document.querySelectorAll('aside > button').forEach(b=>b.classList.toggle('ativo',b.dataset.p===id));
@@ -1135,7 +1185,7 @@ function abrir(id){
  if(id=='paradas')renderParadas();
  if(id=='pareto')renderParetoTab();
  if(id=='checklists')renderChk();
- if(id=='mapa')setTimeout(initMapa,60);
+ if(id=='mapa')renderLoc();
  sortAll(document.getElementById('pg-'+id));
 }
 (function(){const tabs=document.getElementById('ct-tabs'); if(!tabs)return;
